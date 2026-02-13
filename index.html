@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grok A/B Prompt Tester</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
+
+  /* Top bar */
+  .top-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #111; border-bottom: 1px solid #222; flex-shrink: 0; }
+  .top-bar label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .top-bar input, .top-bar select { background: #1a1a1a; border: 1px solid #333; color: #e0e0e0; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+  .top-bar input { flex: 1; max-width: 340px; }
+  .top-bar select { min-width: 160px; }
+
+  /* Split panels */
+  .split-container { display: flex; flex: 1; overflow: hidden; }
+  .panel { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #222; overflow: hidden; }
+  .panel:last-child { border-right: none; }
+  .panel-header { padding: 10px 16px; background: #141414; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .panel-label { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .panel-a .panel-label { color: #6ea8fe; }
+  .panel-b .panel-label { color: #f59e0b; }
+  .clear-btn { background: none; border: 1px solid #333; color: #888; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+  .clear-btn:hover { border-color: #555; color: #ccc; }
+
+  /* System prompt */
+  .system-prompt-area { flex-shrink: 0; padding: 12px 16px; border-bottom: 1px solid #222; background: #0f0f0f; }
+  .system-prompt-area summary { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; user-select: none; padding: 4px 0; }
+  .system-prompt-area summary:hover { color: #999; }
+  .system-prompt-area textarea { width: 100%; height: 180px; background: #1a1a1a; border: 1px solid #282828; color: #ccc; padding: 10px; border-radius: 6px; font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; resize: vertical; margin-top: 8px; line-height: 1.5; }
+  .system-prompt-area textarea:focus { outline: none; border-color: #444; }
+
+  /* Response area */
+  .response-area { flex: 1; overflow-y: auto; padding: 16px; }
+  .message { margin-bottom: 16px; }
+  .message.user { text-align: right; }
+  .message.user .bubble { background: #1e3a5f; display: inline-block; padding: 10px 14px; border-radius: 14px 14px 4px 14px; max-width: 85%; text-align: left; font-size: 14px; line-height: 1.5; }
+  .message.assistant .bubble { background: #1a1a1a; border: 1px solid #282828; padding: 12px 14px; border-radius: 4px 14px 14px 14px; max-width: 95%; font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
+  .message.assistant .bubble em { color: #a0a0a0; font-style: italic; }
+  .streaming-cursor { display: inline-block; width: 2px; height: 14px; background: #6ea8fe; animation: blink 0.8s infinite; vertical-align: text-bottom; margin-left: 2px; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* Bottom input */
+  .input-bar { padding: 12px 16px; background: #111; border-top: 1px solid #222; display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+  .input-bar input { flex: 1; background: #1a1a1a; border: 1px solid #333; color: #e0e0e0; padding: 12px 16px; border-radius: 8px; font-size: 14px; }
+  .input-bar input:focus { outline: none; border-color: #555; }
+  .input-bar input::placeholder { color: #555; }
+  .send-btn { background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .send-btn:hover { background: #3b82f6; }
+  .send-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+  .empty-state { color: #444; font-size: 13px; text-align: center; padding-top: 40px; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <label>API Key</label>
+  <input type="password" id="apiKey" placeholder="xai-... (your Grok API key)" />
+  <label>Model A</label>
+  <select id="modelA">
+    <option value="grok-4-1-fast-reasoning">grok-4.1-fast-reasoning</option>
+    <option value="grok-4-1-fast-non-reasoning">grok-4.1-fast-non-reasoning</option>
+    <option value="grok-4-fast-reasoning">grok-4-fast-reasoning</option>
+    <option value="grok-4-fast-non-reasoning">grok-4-fast-non-reasoning</option>
+    <option value="grok-4-0709">grok-4-0709</option>
+    <option value="grok-3-mini">grok-3-mini</option>
+    <option value="grok-code-fast-1">grok-code-fast-1</option>
+  </select>
+  <label>Model B</label>
+  <select id="modelB">
+    <option value="grok-4-1-fast-reasoning">grok-4.1-fast-reasoning</option>
+    <option value="grok-4-1-fast-non-reasoning">grok-4.1-fast-non-reasoning</option>
+    <option value="grok-4-fast-reasoning">grok-4-fast-reasoning</option>
+    <option value="grok-4-fast-non-reasoning">grok-4-fast-non-reasoning</option>
+    <option value="grok-4-0709">grok-4-0709</option>
+    <option value="grok-3-mini">grok-3-mini</option>
+    <option value="grok-code-fast-1">grok-code-fast-1</option>
+  </select>
+</div>
+
+<div class="split-container">
+  <!-- Panel A -->
+  <div class="panel panel-a">
+    <div class="panel-header">
+      <span class="panel-label">A — System Prompt</span>
+      <button class="clear-btn" onclick="clearPanel('a')">Clear chat</button>
+    </div>
+    <div class="system-prompt-area">
+      <details open>
+        <summary>System instructions (click to collapse)</summary>
+        <textarea id="systemA" placeholder="Paste your system prompt A here..."></textarea>
+      </details>
+    </div>
+    <div class="response-area" id="responseA">
+      <div class="empty-state">Responses will appear here</div>
+    </div>
+  </div>
+
+  <!-- Panel B -->
+  <div class="panel panel-b">
+    <div class="panel-header">
+      <span class="panel-label">B — System Prompt</span>
+      <button class="clear-btn" onclick="clearPanel('b')">Clear chat</button>
+    </div>
+    <div class="system-prompt-area">
+      <details open>
+        <summary>System instructions (click to collapse)</summary>
+        <textarea id="systemB" placeholder="Paste your system prompt B here..."></textarea>
+      </details>
+    </div>
+    <div class="response-area" id="responseB">
+      <div class="empty-state">Responses will appear here</div>
+    </div>
+  </div>
+</div>
+
+<div class="input-bar">
+  <input type="text" id="userInput" placeholder="Type a message to send to both panels..." />
+  <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+</div>
+
+<script>
+  // Conversation history per panel
+  const history = { a: [], b: [] };
+  let streaming = false;
+
+  // Enter key to send
+  document.getElementById('userInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !streaming) sendMessage();
+  });
+
+  function clearPanel(panel) {
+    history[panel] = [];
+    document.getElementById(panel === 'a' ? 'responseA' : 'responseB').innerHTML = '<div class="empty-state">Responses will appear here</div>';
+  }
+
+  function addMessageBubble(panel, role, content) {
+    const container = document.getElementById(panel === 'a' ? 'responseA' : 'responseB');
+    if (container.querySelector('.empty-state')) container.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+    div.innerHTML = `<div class="bubble">${escapeHtml(content)}</div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return div;
+  }
+
+  function createStreamingBubble(panel) {
+    const container = document.getElementById(panel === 'a' ? 'responseA' : 'responseB');
+    if (container.querySelector('.empty-state')) container.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = 'message assistant';
+    div.innerHTML = `<div class="bubble"><span class="streaming-cursor"></span></div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return div.querySelector('.bubble');
+  }
+
+  function updateStreamingBubble(bubble, text) {
+    bubble.innerHTML = formatResponse(text) + '<span class="streaming-cursor"></span>';
+    bubble.closest('.response-area').scrollTop = bubble.closest('.response-area').scrollHeight;
+  }
+
+  function finalizeStreamingBubble(bubble, text) {
+    bubble.innerHTML = formatResponse(text);
+  }
+
+  function formatResponse(text) {
+    // Render *actions* as <em> tags
+    return escapeHtml(text).replace(/\*(.*?)\*/g, '<em>*$1*</em>');
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const msg = input.value.trim();
+    if (!msg || streaming) return;
+
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if (!apiKey) { alert('Please enter your Grok API key'); return; }
+
+    const modelA = document.getElementById('modelA').value;
+    const modelB = document.getElementById('modelB').value;
+    const systemA = document.getElementById('systemA').value;
+    const systemB = document.getElementById('systemB').value;
+
+    streaming = true;
+    document.getElementById('sendBtn').disabled = true;
+    input.value = '';
+
+    // Add user message to both panels
+    addMessageBubble('a', 'user', msg);
+    addMessageBubble('b', 'user', msg);
+    history.a.push({ role: 'user', content: msg });
+    history.b.push({ role: 'user', content: msg });
+
+    // Create streaming bubbles
+    const bubbleA = createStreamingBubble('a');
+    const bubbleB = createStreamingBubble('b');
+
+    // Stream both in parallel — each panel uses its own model
+    const [textA, textB] = await Promise.all([
+      streamGrok(apiKey, modelA, systemA, history.a, bubbleA),
+      streamGrok(apiKey, modelB, systemB, history.b, bubbleB),
+    ]);
+
+    // Save assistant responses to history
+    if (textA) history.a.push({ role: 'assistant', content: textA });
+    if (textB) history.b.push({ role: 'assistant', content: textB });
+
+    streaming = false;
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+  }
+
+  async function streamGrok(apiKey, model, systemPrompt, msgHistory, bubble) {
+    const messages = [];
+    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+    messages.push(...msgHistory);
+
+    try {
+      const res = await fetch('https://api.x.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, messages, stream: true, temperature: 0.9 }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        finalizeStreamingBubble(bubble, `Error: ${res.status} — ${err}`);
+        return null;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let full = '';
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const data = trimmed.slice(5).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const json = JSON.parse(data);
+            const token = json.choices?.[0]?.delta?.content;
+            if (token) {
+              full += token;
+              updateStreamingBubble(bubble, full);
+            }
+          } catch {}
+        }
+      }
+
+      finalizeStreamingBubble(bubble, full);
+      return full;
+    } catch (e) {
+      finalizeStreamingBubble(bubble, `Error: ${e.message}`);
+      return null;
+    }
+  }
+</script>
+</body>
+</html>
