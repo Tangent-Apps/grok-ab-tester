@@ -3,17 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grok A/B Prompt Tester</title>
+<title>AI A/B Prompt Tester</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
 
   /* Top bar */
-  .top-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #111; border-bottom: 1px solid #222; flex-shrink: 0; }
-  .top-bar label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
-  .top-bar input, .top-bar select { background: #1a1a1a; border: 1px solid #333; color: #e0e0e0; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
-  .top-bar input { flex: 1; max-width: 340px; }
-  .top-bar select { min-width: 160px; }
+  .top-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 16px; background: #111; border-bottom: 1px solid #222; flex-shrink: 0; }
+  .top-bar label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .top-bar input, .top-bar select { background: #1a1a1a; border: 1px solid #333; color: #e0e0e0; padding: 7px 10px; border-radius: 6px; font-size: 12px; }
+  .top-bar input { flex: 1; min-width: 180px; max-width: 280px; }
+  .top-bar select { min-width: 180px; }
+  .key-group { display: flex; align-items: center; gap: 6px; }
+  .model-group { display: flex; align-items: center; gap: 6px; }
 
   /* Split panels */
   .split-container { display: flex; flex: 1; overflow: hidden; }
@@ -52,6 +54,10 @@
   .send-btn:hover { background: #3b82f6; }
   .send-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
 
+  /* Optgroup styling */
+  select optgroup { color: #999; font-style: normal; font-weight: 600; font-size: 11px; }
+  select option { color: #e0e0e0; font-weight: 400; font-size: 12px; }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -63,28 +69,52 @@
 <body>
 
 <div class="top-bar">
-  <label>API Key</label>
-  <input type="password" id="apiKey" placeholder="xai-... (your Grok API key)" />
-  <label>Model A</label>
-  <select id="modelA">
-    <option value="grok-4-1-fast-reasoning">grok-4.1-fast-reasoning</option>
-    <option value="grok-4-1-fast-non-reasoning">grok-4.1-fast-non-reasoning</option>
-    <option value="grok-4-fast-reasoning">grok-4-fast-reasoning</option>
-    <option value="grok-4-fast-non-reasoning">grok-4-fast-non-reasoning</option>
-    <option value="grok-4-0709">grok-4-0709</option>
-    <option value="grok-3-mini">grok-3-mini</option>
-    <option value="grok-code-fast-1">grok-code-fast-1</option>
-  </select>
-  <label>Model B</label>
-  <select id="modelB">
-    <option value="grok-4-1-fast-reasoning">grok-4.1-fast-reasoning</option>
-    <option value="grok-4-1-fast-non-reasoning">grok-4.1-fast-non-reasoning</option>
-    <option value="grok-4-fast-reasoning">grok-4-fast-reasoning</option>
-    <option value="grok-4-fast-non-reasoning">grok-4-fast-non-reasoning</option>
-    <option value="grok-4-0709">grok-4-0709</option>
-    <option value="grok-3-mini">grok-3-mini</option>
-    <option value="grok-code-fast-1">grok-code-fast-1</option>
-  </select>
+  <div class="key-group">
+    <label>Grok Key</label>
+    <input type="password" id="apiKeyGrok" placeholder="xai-... (your Grok API key)" />
+  </div>
+  <div class="key-group">
+    <label>Gemini Key</label>
+    <input type="password" id="apiKeyGemini" placeholder="AIza... (your Gemini API key)" />
+  </div>
+  <div class="model-group">
+    <label>Model A</label>
+    <select id="modelA">
+      <optgroup label="Grok (xAI)">
+        <option value="grok:grok-4-1-fast-reasoning">grok-4.1-fast-reasoning</option>
+        <option value="grok:grok-4-1-fast-non-reasoning">grok-4.1-fast-non-reasoning</option>
+        <option value="grok:grok-4-fast-reasoning">grok-4-fast-reasoning</option>
+        <option value="grok:grok-4-fast-non-reasoning">grok-4-fast-non-reasoning</option>
+        <option value="grok:grok-4-0709">grok-4-0709</option>
+        <option value="grok:grok-3-mini">grok-3-mini</option>
+        <option value="grok:grok-code-fast-1">grok-code-fast-1</option>
+      </optgroup>
+      <optgroup label="Gemini (Google)">
+        <option value="gemini:gemini-2.5-flash">gemini-2.5-flash</option>
+        <option value="gemini:gemini-2.5-pro">gemini-2.5-pro</option>
+        <option value="gemini:gemini-2.0-flash">gemini-2.0-flash</option>
+      </optgroup>
+    </select>
+  </div>
+  <div class="model-group">
+    <label>Model B</label>
+    <select id="modelB">
+      <optgroup label="Grok (xAI)">
+        <option value="grok:grok-4-1-fast-reasoning">grok-4.1-fast-reasoning</option>
+        <option value="grok:grok-4-1-fast-non-reasoning">grok-4.1-fast-non-reasoning</option>
+        <option value="grok:grok-4-fast-reasoning">grok-4-fast-reasoning</option>
+        <option value="grok:grok-4-fast-non-reasoning">grok-4-fast-non-reasoning</option>
+        <option value="grok:grok-4-0709">grok-4-0709</option>
+        <option value="grok:grok-3-mini">grok-3-mini</option>
+        <option value="grok:grok-code-fast-1">grok-code-fast-1</option>
+      </optgroup>
+      <optgroup label="Gemini (Google)">
+        <option value="gemini:gemini-2.5-flash">gemini-2.5-flash</option>
+        <option value="gemini:gemini-2.5-pro">gemini-2.5-pro</option>
+        <option value="gemini:gemini-2.0-flash">gemini-2.0-flash</option>
+      </optgroup>
+    </select>
+  </div>
 </div>
 
 <div class="split-container">
@@ -129,11 +159,9 @@
 </div>
 
 <script>
-  // Conversation history per panel
   const history = { a: [], b: [] };
   let streaming = false;
 
-  // Enter key to send
   document.getElementById('userInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !streaming) sendMessage();
   });
@@ -175,7 +203,6 @@
   }
 
   function formatResponse(text) {
-    // Render *actions* as <em> tags
     return escapeHtml(text).replace(/\*(.*?)\*/g, '<em>*$1*</em>');
   }
 
@@ -185,16 +212,31 @@
     return d.innerHTML;
   }
 
+  // Parse "provider:model" from select value
+  function parseModel(val) {
+    const idx = val.indexOf(':');
+    return { provider: val.substring(0, idx), model: val.substring(idx + 1) };
+  }
+
   async function sendMessage() {
     const input = document.getElementById('userInput');
     const msg = input.value.trim();
     if (!msg || streaming) return;
 
-    const apiKey = document.getElementById('apiKey').value.trim();
-    if (!apiKey) { alert('Please enter your Grok API key'); return; }
+    const modelAVal = document.getElementById('modelA').value;
+    const modelBVal = document.getElementById('modelB').value;
+    const parsedA = parseModel(modelAVal);
+    const parsedB = parseModel(modelBVal);
 
-    const modelA = document.getElementById('modelA').value;
-    const modelB = document.getElementById('modelB').value;
+    // Validate API keys for selected providers
+    const grokKey = document.getElementById('apiKeyGrok').value.trim();
+    const geminiKey = document.getElementById('apiKeyGemini').value.trim();
+
+    if (parsedA.provider === 'grok' && !grokKey) { alert('Please enter your Grok API key (Model A uses Grok)'); return; }
+    if (parsedB.provider === 'grok' && !grokKey) { alert('Please enter your Grok API key (Model B uses Grok)'); return; }
+    if (parsedA.provider === 'gemini' && !geminiKey) { alert('Please enter your Gemini API key (Model A uses Gemini)'); return; }
+    if (parsedB.provider === 'gemini' && !geminiKey) { alert('Please enter your Gemini API key (Model B uses Gemini)'); return; }
+
     const systemA = document.getElementById('systemA').value;
     const systemB = document.getElementById('systemB').value;
 
@@ -202,23 +244,19 @@
     document.getElementById('sendBtn').disabled = true;
     input.value = '';
 
-    // Add user message to both panels
     addMessageBubble('a', 'user', msg);
     addMessageBubble('b', 'user', msg);
     history.a.push({ role: 'user', content: msg });
     history.b.push({ role: 'user', content: msg });
 
-    // Create streaming bubbles
     const bubbleA = createStreamingBubble('a');
     const bubbleB = createStreamingBubble('b');
 
-    // Stream both in parallel — each panel uses its own model
     const [textA, textB] = await Promise.all([
-      streamGrok(apiKey, modelA, systemA, history.a, bubbleA),
-      streamGrok(apiKey, modelB, systemB, history.b, bubbleB),
+      streamAI(parsedA.provider, parsedA.model, systemA, history.a, bubbleA),
+      streamAI(parsedB.provider, parsedB.model, systemB, history.b, bubbleB),
     ]);
 
-    // Save assistant responses to history
     if (textA) history.a.push({ role: 'assistant', content: textA });
     if (textB) history.b.push({ role: 'assistant', content: textB });
 
@@ -227,15 +265,34 @@
     input.focus();
   }
 
-  async function streamGrok(apiKey, model, systemPrompt, msgHistory, bubble) {
+  function getProviderConfig(provider) {
+    const grokKey = document.getElementById('apiKeyGrok').value.trim();
+    const geminiKey = document.getElementById('apiKeyGemini').value.trim();
+
+    if (provider === 'grok') {
+      return {
+        url: 'https://api.x.ai/v1/chat/completions',
+        headers: { 'Authorization': `Bearer ${grokKey}`, 'Content-Type': 'application/json' },
+      };
+    }
+    if (provider === 'gemini') {
+      return {
+        url: `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`,
+        headers: { 'Authorization': `Bearer ${geminiKey}`, 'Content-Type': 'application/json' },
+      };
+    }
+  }
+
+  async function streamAI(provider, model, systemPrompt, msgHistory, bubble) {
+    const config = getProviderConfig(provider);
     const messages = [];
     if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
     messages.push(...msgHistory);
 
     try {
-      const res = await fetch('https://api.x.ai/v1/chat/completions', {
+      const res = await fetch(config.url, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        headers: config.headers,
         body: JSON.stringify({ model, messages, stream: true, temperature: 0.9 }),
       });
 
