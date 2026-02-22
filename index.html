@@ -9,13 +9,13 @@
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
 
   /* Top bar */
-  .top-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 16px; background: #111; border-bottom: 1px solid #222; flex-shrink: 0; }
+  .top-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; background: #111; border-bottom: 1px solid #222; flex-shrink: 0; }
   .top-bar label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
   .top-bar input, .top-bar select { background: #1a1a1a; border: 1px solid #333; color: #e0e0e0; padding: 7px 10px; border-radius: 6px; font-size: 12px; }
-  .top-bar input { flex: 1; min-width: 180px; max-width: 280px; }
-  .top-bar select { min-width: 180px; }
-  .key-group { display: flex; align-items: center; gap: 6px; }
-  .model-group { display: flex; align-items: center; gap: 6px; }
+  .top-bar input { flex: 1; min-width: 140px; max-width: 240px; }
+  .top-bar select { min-width: 200px; }
+  .key-group { display: flex; align-items: center; gap: 5px; }
+  .model-group { display: flex; align-items: center; gap: 5px; }
 
   /* Split panels */
   .split-container { display: flex; flex: 1; overflow: hidden; }
@@ -70,12 +70,16 @@
 
 <div class="top-bar">
   <div class="key-group">
-    <label>Grok Key</label>
-    <input type="password" id="apiKeyGrok" placeholder="xai-... (your Grok API key)" />
+    <label>Grok</label>
+    <input type="password" id="apiKeyGrok" placeholder="xai-..." />
   </div>
   <div class="key-group">
-    <label>Gemini Key</label>
-    <input type="password" id="apiKeyGemini" placeholder="AIza... (your Gemini API key)" />
+    <label>Gemini</label>
+    <input type="password" id="apiKeyGemini" placeholder="AIza..." />
+  </div>
+  <div class="key-group">
+    <label>OpenAI</label>
+    <input type="password" id="apiKeyOpenAI" placeholder="sk-..." />
   </div>
   <div class="model-group">
     <label>Model A</label>
@@ -96,6 +100,15 @@
         <option value="gemini:gemini-2.5-flash">gemini-2.5-flash</option>
         <option value="gemini:gemini-2.5-pro">gemini-2.5-pro</option>
         <option value="gemini:gemini-2.0-flash">gemini-2.0-flash</option>
+      </optgroup>
+      <optgroup label="OpenAI (ChatGPT)">
+        <option value="openai:gpt-5.2">GPT-5.2 (Thinking)</option>
+        <option value="openai:gpt-5.2-chat-latest">GPT-5.2 Instant</option>
+        <option value="openai:gpt-5.2-pro">GPT-5.2 Pro</option>
+        <option value="openai:gpt-5.1">GPT-5.1</option>
+        <option value="openai:gpt-4.1">GPT-4.1</option>
+        <option value="openai:gpt-4.1-mini">GPT-4.1 Mini</option>
+        <option value="openai:o4-mini">o4-mini</option>
       </optgroup>
     </select>
   </div>
@@ -118,6 +131,15 @@
         <option value="gemini:gemini-2.5-flash">gemini-2.5-flash</option>
         <option value="gemini:gemini-2.5-pro">gemini-2.5-pro</option>
         <option value="gemini:gemini-2.0-flash">gemini-2.0-flash</option>
+      </optgroup>
+      <optgroup label="OpenAI (ChatGPT)">
+        <option value="openai:gpt-5.2">GPT-5.2 (Thinking)</option>
+        <option value="openai:gpt-5.2-chat-latest">GPT-5.2 Instant</option>
+        <option value="openai:gpt-5.2-pro">GPT-5.2 Pro</option>
+        <option value="openai:gpt-5.1">GPT-5.1</option>
+        <option value="openai:gpt-4.1">GPT-4.1</option>
+        <option value="openai:gpt-4.1-mini">GPT-4.1 Mini</option>
+        <option value="openai:o4-mini">o4-mini</option>
       </optgroup>
     </select>
   </div>
@@ -218,7 +240,6 @@
     return d.innerHTML;
   }
 
-  // Parse "provider:model" from select value
   function parseModel(val) {
     const idx = val.indexOf(':');
     return { provider: val.substring(0, idx), model: val.substring(idx + 1) };
@@ -234,14 +255,16 @@
     const parsedA = parseModel(modelAVal);
     const parsedB = parseModel(modelBVal);
 
-    // Validate API keys for selected providers
     const grokKey = document.getElementById('apiKeyGrok').value.trim();
     const geminiKey = document.getElementById('apiKeyGemini').value.trim();
+    const openaiKey = document.getElementById('apiKeyOpenAI').value.trim();
 
-    if (parsedA.provider === 'grok' && !grokKey) { alert('Please enter your Grok API key (Model A uses Grok)'); return; }
-    if (parsedB.provider === 'grok' && !grokKey) { alert('Please enter your Grok API key (Model B uses Grok)'); return; }
-    if (parsedA.provider === 'gemini' && !geminiKey) { alert('Please enter your Gemini API key (Model A uses Gemini)'); return; }
-    if (parsedB.provider === 'gemini' && !geminiKey) { alert('Please enter your Gemini API key (Model B uses Gemini)'); return; }
+    // Validate API keys
+    for (const p of [parsedA, parsedB]) {
+      if (p.provider === 'grok' && !grokKey) { alert('Please enter your Grok API key'); return; }
+      if (p.provider === 'gemini' && !geminiKey) { alert('Please enter your Gemini API key'); return; }
+      if (p.provider === 'openai' && !openaiKey) { alert('Please enter your OpenAI API key'); return; }
+    }
 
     const systemA = document.getElementById('systemA').value;
     const systemB = document.getElementById('systemB').value;
@@ -274,6 +297,7 @@
   function getProviderConfig(provider) {
     const grokKey = document.getElementById('apiKeyGrok').value.trim();
     const geminiKey = document.getElementById('apiKeyGemini').value.trim();
+    const openaiKey = document.getElementById('apiKeyOpenAI').value.trim();
 
     if (provider === 'grok') {
       return {
@@ -283,8 +307,14 @@
     }
     if (provider === 'gemini') {
       return {
-        url: `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`,
+        url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
         headers: { 'Authorization': `Bearer ${geminiKey}`, 'Content-Type': 'application/json' },
+      };
+    }
+    if (provider === 'openai') {
+      return {
+        url: 'https://api.openai.com/v1/chat/completions',
+        headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
       };
     }
   }
