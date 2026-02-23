@@ -194,6 +194,9 @@
   const history = { a: [], b: [] };
   let streaming = false;
 
+  // Models that only support default temperature (1) — no custom temperature allowed
+  const NO_TEMP_MODELS = ['gpt-5-mini', 'gpt-5-nano', 'o4-mini', 'gpt-5.2', 'gpt-5.2-pro'];
+
   document.getElementById('userInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !streaming) sendMessage();
   });
@@ -329,11 +332,17 @@
     if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
     messages.push(...msgHistory);
 
+    // Build request body — skip temperature for models that don't support it
+    const body = { model, messages, stream: true };
+    if (!NO_TEMP_MODELS.includes(model)) {
+      body.temperature = 0.9;
+    }
+
     try {
       const res = await fetch(config.url, {
         method: 'POST',
         headers: config.headers,
-        body: JSON.stringify({ model, messages, stream: true, temperature: 0.9 }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
