@@ -88,6 +88,10 @@
     <label>OpenAI</label>
     <input type="password" id="apiKeyOpenAI" placeholder="sk-..." />
   </div>
+  <div class="key-group">
+    <label>Claude</label>
+    <input type="password" id="apiKeyClaude" placeholder="sk-ant-..." />
+  </div>
   <div class="model-group">
     <label>Model A</label>
     <select id="modelA">
@@ -120,6 +124,11 @@
         <option value="openai:gpt-4.1">GPT-4.1</option>
         <option value="openai:gpt-4.1-mini">GPT-4.1 Mini</option>
         <option value="openai:o4-mini">o4-mini</option>
+      </optgroup>
+      <optgroup label="Claude (Anthropic)">
+        <option value="claude:claude-opus-4-6">Claude Opus 4.6</option>
+        <option value="claude:claude-sonnet-4-6">Claude Sonnet 4.6</option>
+        <option value="claude:claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
       </optgroup>
     </select>
   </div>
@@ -155,6 +164,11 @@
         <option value="openai:gpt-4.1">GPT-4.1</option>
         <option value="openai:gpt-4.1-mini">GPT-4.1 Mini</option>
         <option value="openai:o4-mini">o4-mini</option>
+      </optgroup>
+      <optgroup label="Claude (Anthropic)">
+        <option value="claude:claude-opus-4-6">Claude Opus 4.6</option>
+        <option value="claude:claude-sonnet-4-6">Claude Sonnet 4.6</option>
+        <option value="claude:claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
       </optgroup>
     </select>
   </div>
@@ -306,12 +320,14 @@
     const grokKey = document.getElementById('apiKeyGrok').value.trim();
     const geminiKey = document.getElementById('apiKeyGemini').value.trim();
     const openaiKey = document.getElementById('apiKeyOpenAI').value.trim();
+    const claudeKey = document.getElementById('apiKeyClaude').value.trim();
 
     // Validate API keys
     for (const p of [parsedA, parsedB]) {
       if (p.provider === 'grok' && !grokKey) { alert('Please enter your Grok API key'); return; }
       if (p.provider === 'gemini' && !geminiKey) { alert('Please enter your Gemini API key'); return; }
       if (p.provider === 'openai' && !openaiKey) { alert('Please enter your OpenAI API key'); return; }
+      if (p.provider === 'claude' && !claudeKey) { alert('Please enter your Claude API key'); return; }
     }
 
     const systemA = document.getElementById('systemA').value;
@@ -362,6 +378,7 @@
     const grokKey = document.getElementById('apiKeyGrok').value.trim();
     const geminiKey = document.getElementById('apiKeyGemini').value.trim();
     const openaiKey = document.getElementById('apiKeyOpenAI').value.trim();
+    const claudeKey = document.getElementById('apiKeyClaude').value.trim();
 
     if (provider === 'grok') {
       return {
@@ -381,18 +398,66 @@
         headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
       };
     }
+    if (provider === 'claude') {
+      return {
+        url: 'https://api.anthropic.com/v1/messages',
+        headers: {
+          'x-api-key': claudeKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+          'Content-Type': 'application/json',
+        },
+      };
+    }
+  }
+
+  // Convert OpenAI-style messages to Claude format
+  function toClaudeMessages(msgHistory) {
+    return msgHistory.map(m => {
+      // Convert multimodal content (image + text) to Claude format
+      if (Array.isArray(m.content)) {
+        const parts = [];
+        for (const part of m.content) {
+          if (part.type === 'image_url') {
+            // Extract base64 data and media type from data URL
+            const dataUrl = part.image_url.url;
+            const match = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
+            if (match) {
+              parts.push({ type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } });
+            }
+          } else if (part.type === 'text') {
+            parts.push({ type: 'text', text: part.text });
+          }
+        }
+        return { role: m.role, content: parts };
+      }
+      return { role: m.role, content: m.content };
+    });
   }
 
   async function streamAI(provider, model, systemPrompt, msgHistory, bubble) {
     const config = getProviderConfig(provider);
-    const messages = [];
-    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
-    messages.push(...msgHistory);
+    let body;
 
-    // Build request body — skip temperature for models that don't support it
-    const body = { model, messages, stream: true };
-    if (!NO_TEMP_MODELS.includes(model)) {
+    if (provider === 'claude') {
+      // Claude uses a different API format
+      body = {
+        model,
+        max_tokens: 4096,
+        stream: true,
+        messages: toClaudeMessages(msgHistory),
+      };
+      if (systemPrompt) body.system = systemPrompt;
       body.temperature = 0.9;
+    } else {
+      // OpenAI-compatible format (Grok, Gemini, OpenAI)
+      const messages = [];
+      if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+      messages.push(...msgHistory);
+      body = { model, messages, stream: true };
+      if (!NO_TEMP_MODELS.includes(model)) {
+        body.temperature = 0.9;
+      }
     }
 
     try {
@@ -428,7 +493,13 @@
           if (data === '[DONE]') continue;
           try {
             const json = JSON.parse(data);
-            const token = json.choices?.[0]?.delta?.content;
+            let token;
+            if (provider === 'claude') {
+              // Claude streaming: event data has type "content_block_delta"
+              token = json.type === 'content_block_delta' ? json.delta?.text : null;
+            } else {
+              token = json.choices?.[0]?.delta?.content;
+            }
             if (token) {
               full += token;
               updateStreamingBubble(bubble, full);
